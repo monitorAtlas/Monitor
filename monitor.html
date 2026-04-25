@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Monitoramento - Produção</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        /* === VARIÁVEIS DE TEMA - INDUSTRIAL FUTURISTA & GLASSMORPHISM === */
+        :root {
+            /* Fundo Animado Base */
+            --bg-color-1: #e0e5ec;
+            --bg-color-2: #f4f7f6;
+            
+            /* Vidro e Superfícies */
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+            
+            --machine-bg: rgba(240, 242, 245, 0.5);
+            --machine-border: rgba(255, 255, 255, 0.6);
+            
+            /* Tipografia */
+            --text-main: #1d1d1f;
+            --text-muted: #86868b;
+            --text-value: #111111;
+            
+            /* Status Cores Numix/iOS */
+            --color-ok: #34C759;
+            --color-ok-glow: rgba(52, 199, 89, 0.2);
+            --color-parada: #FF3B30;
+            --color-parada-glow: rgba(255, 59, 48, 0.2);
+            --color-quebrada: #FFCC00;
+            --color-quebrada-glow: rgba(255, 204, 0, 0.2);
+            
+            /* Inputs e Botões */
+            --input-bg: rgba(255, 255, 255, 0.8);
+            --stat-box: rgba(255, 255, 255, 0.7);
+            
+            /* Cartões Específicos */
+            --card-back-bg: rgba(240, 240, 245, 0.9);
+        }
+
+        body.dark-mode {
+            /* Fundo Animado Base Escuro */
+            --bg-color-1: #0a0a0c;
+            --bg-color-2: #141418;
+            
+            /* Vidro e Superfícies */
+            --glass-bg: rgba(28, 28, 30, 0.5);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            
+            --machine-bg: rgba(20, 20, 22, 0.4);
+            --machine-border: rgba(255, 255, 255, 0.05);
+            
+            /* Tipografia */
+            --text-main: #f5f5f7;
+            --text-muted: #98989d;
+            --text-value: #ffffff;
+            
+            /* Inputs e Botões */
+            --input-bg: rgba(0, 0, 0, 0.4);
+            --stat-box: rgba(40, 40, 45, 0.6);
+            
+            /* Cartões Específicos */
+            --card-back-bg: rgba(20, 20, 25, 0.95);
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+            color: var(--text-main); 
+            background: linear-gradient(135deg, var(--bg-color-1), var(--bg-color-2));
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* === SCROLLBAR FUTURISTA === */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 10px; }
+
+        /* === HEADER ESTILO DOCK iOS === */
+        .header { 
+            position: sticky; 
+            top: 10px; 
+            z-index: 1000; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 30px; 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 15px 25px; 
+            border-radius: 20px; 
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow); 
+            flex-wrap: wrap; 
+            gap: 15px; 
+            transition: 0.5s;
+        }
+        .header h1 { margin: 0; font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+        .header p { margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* === FILTROS E CONTROLES === */
+        .actions-container { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .filter-box { display: flex; flex-direction: column; }
+        .filter-box label { font-size: 9px; font-weight: 800; margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-box select { 
+            padding: 8px 12px; 
+            font-weight: 700; 
+            border-radius: 10px; 
+            border: 1px solid var(--glass-border); 
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: 13px; 
+            cursor: pointer; 
+            backdrop-filter: blur(10px);
+            transition: 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        .filter-box select:hover { border-color: var(--text-muted); }
+
+        /* Botões Estilo Numix / Win 8.1 */
+        .btn-sync { 
+            background-color: var(--text-main); 
+            color: var(--bg-color-1); 
+            border: none; 
+            padding: 10px 16px; 
+            border-radius: 12px; 
+            font-weight: 800; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            font-size: 11px; 
+            letter-spacing: 0.5px;
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            margin-top: 13px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
+        }
+        .btn-sync:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+        .btn-sync:active { transform: translateY(1px); }
+        .btn-global { background-color: var(--color-parada); color: #fff; }
+        .btn-print { background-color: #007AFF; color: #fff; } /* Azul iOS */
+
+        #status-update { font-size: 10px; color: var(--text-muted); font-weight: 600; line-height: 1.4; text-align: right; background: var(--stat-box); padding: 6px 12px; border-radius: 8px; }
+
+        /* === GRID E MÁQUINAS (INDUSTRIAL) === */
+        .main-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 25px; align-items: start; }
+        .machine-container { 
+            background: var(--machine-bg); 
+            backdrop-filter: blur(10px);
+            border-radius: 20px; 
+            padding: 18px; 
+            box-shadow: var(--glass-shadow); 
+            border: 1px solid var(--machine-border); 
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s; 
+        }
+        /* Top line futurista para as máquinas */
+        .machine-container::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+        }
+        .machine-container.m1::before { background: var(--color-parada); }
+        .machine-container.m2::before { background: #007AFF; }
+        .machine-container.m3::before { background: #AF52DE; }
+        
+        .machine-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+
+        /* === CARDS (GLASSMORPHISM & WIN 8.1 TILES) === */
+        .flip-card-wrapper { perspective: 1000px; min-width: 0; height: 185px; } /* Altura aumentada para melhor respiro */
+        .flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; }
+        .flip-card-wrapper.flipped .flip-card-inner { transform: rotateY(180deg); }
+        .flip-card-front, .flip-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; height: 100%; }
+        
+        .station-card { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 14px; 
+            padding: 14px; 
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--color-ok); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+            display: flex; flex-direction: column; justify-content: space-between; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            overflow: hidden; /* Evita vazamento */
+        }
+        .station-card:hover { transform: translateY(-4px); box-shadow: var(--glass-shadow); }
+        
+        /* Cores de Status com Glow Sutil */
+        .station-card.status-parada { border-left-color: var(--color-parada); box-shadow: 0 0 15px var(--color-parada-glow); }
+        .station-card.status-quebrada { border-left-color: var(--color-quebrada); box-shadow: 0 0 15px var(--color-quebrada-glow); }
+        .station-card.status-rodando { border-left-color: var(--color-ok); box-shadow: 0 0 15px var(--color-ok-glow); }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 4px; }
+        
+        /* Nova regra Flex no Título para não quebrar a linha */
+        .card-header h2 { 
+            margin: 0; font-size: 1rem; font-weight: 900; color: var(--text-main); font-family: 'JetBrains Mono', monospace; 
+            display: flex; align-items: center; white-space: nowrap; 
+        }
+        .badge-repetido { background: var(--text-main); color: var(--bg-color-1); padding: 2px 5px; border-radius: 6px; font-size: 9px; font-weight: 800; margin-left: 5px; }
+        
+        .card-header select {
+            background: var(--input-bg); color: var(--text-main); padding: 4px 6px; border-radius: 6px; border: 1px solid var(--glass-border); font-size: 9px; font-weight: 800; text-transform: uppercase; cursor: pointer;
+        }
+
+        .info-row { display: flex; flex-direction: column; margin-bottom: 8px; width: 100%; }
+        .info-label { font-size: 8px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .info-value { font-size: 13px; font-weight: 700; color: var(--text-value); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; width: 100%; }
+        
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: auto; }
+        .stat-box { text-align: center; padding: 6px 2px; background: var(--stat-box); border-radius: 8px; border: 1px solid var(--glass-border); transition: 0.3s; }
+        .stat-num { display: block; font-size: 14px; font-weight: 900; color: var(--text-main); font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: 7px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; display: block; }
+
+        /* === HUD FUTURISTA (BACK CARD) === */
+        .flip-card-back {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; transform: rotateY(180deg); z-index: 2;
+            background: var(--card-back-bg); backdrop-filter: blur(25px); border-radius: 14px;
+            border: 1px solid var(--glass-border); border-top: 5px solid #007AFF;
+            box-shadow: var(--glass-shadow); padding: 12px; display: flex; flex-direction: column;
+            overflow-y: auto; cursor: pointer;
+        }
+        .flip-card-back .back-title { font-size: 10px; font-weight: 900; text-transform: uppercase; color: #007AFF; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; letter-spacing: 1px; }
+        .flip-card-back .back-title .back-close { font-size: 9px; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 6px; padding: 3px 8px; cursor: pointer; color: var(--text-main); }
+        
+        .flip-card-back .detail-header { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding-bottom: 6px; font-size: 8px; font-weight: 900; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); margin-bottom: 6px; letter-spacing: 0.5px; }
+        .flip-card-back .detail-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 6px 0; font-size: 11px; border-bottom: 1px solid rgba(150,150,150,0.1); }
+        .flip-card-back .detail-row:last-child { border-bottom: none; }
+        .flip-card-back .detail-cell { text-align: center; font-weight: 600; color: var(--text-main); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .flip-card-back .detail-cell.cor-cell { color: var(--color-parada); font-weight: 900; }
+        .flip-card-back .no-details { text-align: center; color: var(--text-muted); font-size: 11px; padding: 30px 0; font-weight: 600; }
+
+        /* === MODAIS & OVERLAYS (BLUR EXTREMO) === */
+        .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 9999; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+        .custom-modal-box { background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--glass-border); padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); width: 340px; max-width: 90%; text-align: center; }
+        .custom-modal-box h3 { margin-top: 0; font-size: 1.1rem; color: var(--text-main); margin-bottom: 25px; font-weight: 800; }
+        .custom-modal-input { background: var(--input-bg); color: var(--text-main); width: 100%; padding: 15px; margin-bottom: 20px; border: 1px solid var(--glass-border); border-radius: 12px; font-size: 18px; text-align: center; font-weight: 800; font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; transition: 0.3s; }
+        .custom-modal-input:focus { border-color: #007AFF; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2); }
+        .custom-modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .custom-modal-actions button { padding: 12px 0; border: none; border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.2s; flex: 1; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        .btn-cancelar { background: var(--stat-box); color: var(--text-main); border: 1px solid var(--glass-border); }
+        .btn-cancelar:hover { background: var(--input-bg); }
+        .btn-confirmar { background: var(--color-parada); color: #fff; box-shadow: 0 4px 15px var(--color-parada-glow); }
+        
+        /* Config Panel Modal */
+        .config-panel { width: 500px !important; text-align: left !important; }
+        .config-section { background: var(--stat-box); border: 1px solid var(--glass-border); padding: 20px; border-radius: 16px; }
+        .config-section h4 { color: var(--color-parada); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-top: 0; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 15px; }
+        .config-input { width: 100%; padding: 10px 15px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--input-bg); color: var(--text-main); font-size: 12px; margin-bottom: 12px; font-weight: 600; }
+        .config-btn-action { width: 100%; padding: 12px; background: var(--text-main); color: var(--bg-color-1); border: none; border-radius: 10px; font-weight: 800; text-transform: uppercase; font-size: 11px; cursor: pointer; }
+
+        /* === BOTOES FLUTUANTES === */
+        .btn-theme-floating {
+            position: fixed; bottom: 30px; right: 30px; background: var(--glass-bg); backdrop-filter: blur(20px); color: var(--text-main);
+            border: 1px solid var(--glass-border); border-radius: 50%; width: 55px; height: 55px; font-size: 24px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: var(--glass-shadow);
+            z-index: 1001; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-theme-floating:hover { transform: scale(1.1) rotate(15deg); }
+        .config-btn { background: transparent; border: none; cursor: pointer; transition: 0.5s; padding: 5px; opacity: 0.5; filter: grayscale(1); }
+        .config-btn:hover { opacity: 1; transform: rotate(90deg); filter: grayscale(0); }
+
+        /* Toast Alertas */
+        .toast-alerta {
+            position: fixed; bottom: 30px; left: 30px; background: rgba(52, 199, 89, 0.9); backdrop-filter: blur(10px);
+            color: #fff; padding: 15px 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(52, 199, 89, 0.3);
+            z-index: 99999; display: none; font-size: 13px; font-weight: 600; line-height: 1.5; border: 1px solid rgba(255,255,255,0.2);
+            transition: opacity 0.5s; opacity: 0;
+        }
+
+        #loading-msg { text-align: center; font-weight: 800; color: var(--color-parada); padding: 20px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; display: none; }
+
+        /* === RESPONSIVIDADE (MOBILE) === */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            
+            /* Remove o fixo (sticky) e centraliza a Navbar no celular */
+            .header { 
+                position: relative; 
+                top: 0;
+                flex-direction: column; 
+                align-items: center; 
+                text-align: center; 
+                padding: 15px; 
+                border-radius: 16px; 
+            }
+            .header div:first-child {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+            .header h1 { font-size: 1.2rem; justify-content: center; width: 100%; }
+            
+            /* Centraliza os botões, selects e inputs */
+            .actions-container { flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+            .filter-box { width: 100%; align-items: center; text-align: center; }
+            .filter-box select { width: 100%; text-align: center; }
+            .btn-sync { width: 100%; padding: 14px; justify-content: center; }
+            #status-update { text-align: center; width: 100%; }
+
+            /* Ajustes Finos para Cards no Celular */
+            .card-header h2 { font-size: 0.9rem; }
+            .card-header select { padding: 3px 4px; font-size: 8px; }
+
+            .main-container { grid-template-columns: 1fr; gap: 15px; }
+            .machine-container { padding: 12px; border-radius: 16px; }
+            .machine-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .station-card { padding: 10px; border-radius: 10px; }
+            .btn-theme-floating { bottom: 20px; right: 20px; width: 50px; height: 50px; }
+        }
+
+        /* ============================================================
+           KPI DASHBOARD MODAL — ADICIONADO SEM ALTERAR NADA EXISTENTE
+           ============================================================ */
+        .kpi-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 99998;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+            animation: kpiFadeIn 0.35s cubic-bezier(0.25,0.8,0.25,1);
+        }
+        .kpi-overlay.open { display: flex; }
+        @keyframes kpiFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .kpi-modal {
+            width: 100%;
+            max-width: 1380px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            box-shadow: 0 40px 120px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: kpiSlideUp 0.4s cubic-bezier(0.25,0.8,0.25,1);
+        }
+        @keyframes kpiSlideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .kpi-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--glass-border);
+            background: linear-gradient(135deg, rgba(0,122,255,0.08), rgba(175,82,222,0.06));
+            flex-wrap: wrap; gap: 12px;
+        }
+        .kpi-header-left { display: flex; align-items: center; gap: 14px; }
+        .kpi-header-icon {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: linear-gradient(135deg, #007AFF, #5E5CE6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; box-shadow: 0 8px 20px rgba(0,122,255,0.3);
+        }
+        .kpi-header-title { font-size: 1.4rem; font-weight: 900; margin: 0; letter-spacing: -0.5px; }
+        .kpi-header-sub { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+        .kpi-header-tabs { display: flex; gap: 8px; }
+        .kpi-tab {
+            padding: 8px 18px; border-radius: 10px; border: 1px solid var(--glass-border);
+            background: var(--stat-box); color: var(--text-muted);
+            font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+            cursor: pointer; transition: all 0.25s;
+        }
+        .kpi-tab.active, .kpi-tab:hover {
+            background: linear-gradient(135deg, #007AFF, #5E5CE6);
+            color: #fff; border-color: transparent;
+            box-shadow: 0 4px 14px rgba(0,122,255,0.3);
+        }
+        .kpi-close-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--stat-box); border: 1px solid var(--glass-border);
+            color: var(--text-main); font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.25s; flex-shrink: 0;
+        }
+        .kpi-close-btn:hover { background: var(--color-parada); color: #fff; transform: rotate(90deg); border-color: transparent; }
+
+        .kpi-body { padding: 24px 28px; }
+
+        /* Big KPI Numbers */
+        .kpi-big-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-big-card {
+            background: var(--stat-box);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 20px 18px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+        .kpi-big-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.12); }
+        .kpi-big-card::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 18px 18px 0 0;
+        }
+        .kpi-big-card.c-blue::before  { background: linear-gradient(90deg,#007AFF,#5AC8FA); }
+        .kpi-big-card.c-green::before { background: linear-gradient(90deg,#34C759,#30D158); }
+        .kpi-big-card.c-red::before   { background: linear-gradient(90deg,#FF3B30,#FF6961); }
+        .kpi-big-card.c-yellow::before { background: linear-gradient(90deg,#FFCC00,#FFD60A); }
+        .kpi-big-card.c-purple::before { background: linear-gradient(90deg,#AF52DE,#BF5AF2); }
+        .kpi-big-card.c-teal::before   { background: linear-gradient(90deg,#5AC8FA,#32ADE6); }
+        .kpi-big-card .kpi-emoji { font-size: 22px; margin-bottom: 10px; display: block; }
+        .kpi-big-card .kpi-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2rem; font-weight: 900; line-height: 1;
+            color: var(--text-value); margin-bottom: 4px; display: block;
+        }
+        .kpi-big-card .kpi-lbl {
+            font-size: 9px; font-weight: 800; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .kpi-big-card .kpi-sub {
+            font-size: 11px; font-weight: 600; color: var(--text-muted);
+            margin-top: 6px; display: block;
+        }
+
+        /* Charts Grid */
+        .kpi-charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        .kpi-chart-card {
+            background: var(--stat-box);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 20px;
+            display: flex; flex-direction: column;
+        }
+        .kpi-chart-card.span2 { grid-column: span 2; }
+        .kpi-chart-card.span3 { grid-column: span 3; }
+        .kpi-chart-title {
+            font-size: 11px; font-weight: 900; text-transform: uppercase;
+            color: var(--text-muted); letter-spacing: 1px;
+            margin-bottom: 16px; display: flex; align-items: center; gap: 7px;
+        }
+        .kpi-chart-title .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+        }
+        .kpi-chart-wrap { position: relative; flex: 1; min-height: 180px; }
+
+        /* Ranking List */
+        .kpi-rank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .kpi-rank-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 10px;
+            background: var(--input-bg); border: 1px solid var(--glass-border);
+            transition: 0.2s;
+        }
+        .kpi-rank-item:hover { transform: translateX(4px); }
+        .kpi-rank-pos {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; font-weight: 900; color: var(--text-muted);
+            width: 22px; text-align: center; flex-shrink: 0;
+        }
+        .kpi-rank-pos.gold { color: #FFD60A; }
+        .kpi-rank-pos.silver { color: #8E8E93; }
+        .kpi-rank-pos.bronze { color: #CD7F32; }
+        .kpi-rank-name { font-size: 12px; font-weight: 700; color: var(--text-main); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .kpi-rank-bar-wrap { width: 80px; height: 6px; background: var(--glass-border); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+        .kpi-rank-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#007AFF,#5E5CE6); }
+        .kpi-rank-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px; font-weight: 900; color: var(--text-value);
+            flex-shrink: 0; min-width: 36px; text-align: right;
+        }
+
+        /* Status Tiles */
+        .kpi-status-grid {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+        }
+        .kpi-status-tile {
+            border-radius: 14px; padding: 18px 14px;
+            text-align: center; position: relative; overflow: hidden;
+        }
+        .kpi-status-tile.rodando { background: rgba(52,199,89,0.12); border: 1px solid rgba(52,199,89,0.3); }
+        .kpi-status-tile.parada  { background: rgba(255,59,48,0.12); border: 1px solid rgba(255,59,48,0.3); }
+        .kpi-status-tile.quebrada { background: rgba(255,204,0,0.12); border: 1px solid rgba(255,204,0,0.3); }
+        .kpi-status-tile .st-num  { font-family: 'JetBrains Mono', monospace; font-size: 2.8rem; font-weight: 900; line-height: 1; display: block; }
+        .kpi-status-tile.rodando .st-num { color: #34C759; }
+        .kpi-status-tile.parada .st-num  { color: #FF3B30; }
+        .kpi-status-tile.quebrada .st-num { color: #FFCC00; }
+        .kpi-status-tile .st-lbl  { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-top: 6px; display: block; }
+        .kpi-status-tile .st-pct  { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-top: 4px; display: block; }
+
+        /* Btn KPI dashboard */
+        .btn-kpi-dashboard {
+            background: linear-gradient(135deg, #007AFF, #5E5CE6);
+            color: #fff; border: none; padding: 10px 16px;
+            border-radius: 12px; font-weight: 800; cursor: pointer;
+            text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 8px; margin-top: 13px;
+            box-shadow: 0 4px 15px rgba(0,122,255,0.3);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .btn-kpi-dashboard:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,122,255,0.45); }
+        .btn-kpi-dashboard:active { transform: translateY(1px); }
+
+        @media (max-width: 900px) {
+            .kpi-charts-grid { grid-template-columns: 1fr 1fr; }
+            .kpi-chart-card.span2 { grid-column: span 2; }
+            .kpi-chart-card.span3 { grid-column: span 2; }
+        }
+        @media (max-width: 600px) {
+            .kpi-body { padding: 16px; }
+            .kpi-header { padding: 16px; }
+            .kpi-charts-grid { grid-template-columns: 1fr; }
+            .kpi-chart-card.span2, .kpi-chart-card.span3 { grid-column: span 1; }
+            .kpi-big-row { grid-template-columns: repeat(2, 1fr); }
+            .kpi-header-tabs { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <audio id="somNotificacao" src="https://www.myinstants.com/media/sounds/uber-request.mp3" preload="auto"></audio>
+    <div id="toastAlocacao" class="toast-alerta"></div>
+    <div class="header">
+        <div>
+            <h1> Painel de Abastecimento <button class="config-btn" onclick="verificarSenhaConfig()" title="Configurações do Sistema">⚙️</button></h1>
+            <p>Monitoramento em Tempo Real</p>
+        </div>
+        <div class="actions-container">
+            <div class="filter-box">
+                <label>GRUPO</label>
+                <select id="filtroGrupo" onchange="trocarGrupo()">
+                    <option value="Grupo 1">Grupo 1</option>
+                    <option value="Grupo 2">Grupo 2</option>
+                    <option value="Grupo 3">Grupo 3</option>
+                    <option value="Grupo 4">Grupo 4</option>
+                    <option value="Grupo 5">Grupo 5</option>
+                    <option value="Grupo 6">Grupo 6</option>
+                    <option value="Grupo 7">Grupo 7</option>
+                    <option value="Grupo 8">Grupo 8</option>
+                </select>
+            </div>
+            
+            <div class="filter-box">
+                <label>MODELO</label>
+                <select id="filtroModelo" onchange="aplicarFiltroModelo()">
+                    <option value="TODOS">Todos</option>
+                </select>
+            </div>
+            <div class="filter-box">
+                <label>STATUS GLOBAL</label>
+                <select id="statusGlobal">
+                    <option value="">Selecionar...</option>
+                    <option value="rodando">RODANDO</option>
+                    <option value="parada">PARADA</option>
+                    <option value="quebrada">QUEBRADA</option>
+                </select>
+            </div>
+            
+            <button class="btn-sync btn-global" onclick="alterarStatusGlobal()"> Aplicar Global</button>
+            <button class="btn-sync btn-print" onclick="gerarImpressao()"> Imprimir</button>
+            <button class="btn-sync" id="btnSyncRef" onclick="sincronizarProducao()"> Atualizar Referência</button>
+            <button class="btn-kpi-dashboard" onclick="abrirDashboard()">📊 Analysis KPIs</button>
+            <div id="status-update">Atualizando...</div>
+        </div>
+    </div>
+    <div id="loading-msg"> Erro ao carregar dados!</div>
+    <div class="main-container" id="stationGrid"></div>
+    
+    <button id="btnTema" class="btn-theme-floating" onclick="alternarTema()" title="Alternar Tema Escuro/Claro">🌓</button>
+    
+    <div id="customModalOverlay" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <h3 id="customModalMessage">Mensagem</h3>
+            <input type="password" id="customModalInput" class="custom-modal-input" placeholder="Crachá..." style="display:none;" autocomplete="off">
+            <div class="custom-modal-actions">
+                <button id="customModalBtnCancel" class="btn-cancelar">Cancelar</button>
+                <button id="customModalBtnOk" class="btn-confirmar">OK</button>
+            </div>
+        </div>
+    </div>
+    <div id="configModalOverlay" class="custom-modal-overlay">
+        <div class="custom-modal-box config-panel">
+            <h3 style="text-align: center; font-size: 1.2rem;"> Configurações - Crachás</h3>
+            <div id="configMsg"></div>
+            
+            <div class="config-grid">
+                <div class="config-section" style="flex: 1;">
+                    <h4> Adicionar Funcionário</h4>
+                    <input type="number" id="configNovoCracha" class="config-input" placeholder="Nº do Crachá..." autocomplete="off">
+                    <input type="text" id="configNovoNome" class="config-input" placeholder="Nome do Funcionário..." autocomplete="off">
+                    <button class="config-btn-action" onclick="adicionarCracha()">Salvar Crachá</button>
+                </div>
+            </div>
+            
+            <div class="custom-modal-actions">
+                <button onclick="fecharConfig()" class="btn-cancelar" style="flex: none; width: 100%;">Concluir e Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== KPI DASHBOARD MODAL ===== -->
+    <div id="kpiOverlay" class="kpi-overlay" onclick="kpiOverlayClick(event)">
+        <div class="kpi-modal">
+            <div class="kpi-header">
+                <div class="kpi-header-left">
+                    <div class="kpi-header-icon">📊</div>
+                    <div>
+                        <p class="kpi-header-title">Dashboard de KPIs</p>
+                        <p class="kpi-header-sub" id="kpiSubtitle">Produção · Carregando...</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div class="kpi-header-tabs">
+                        <button class="kpi-tab active" onclick="kpiSetTab(this,'geral')">Geral</button>
+                        <button class="kpi-tab" onclick="kpiSetTab(this,'modelos')">Modelos</button>
+                        <button class="kpi-tab" onclick="kpiSetTab(this,'tamanhos')">Tamanhos</button>
+                        <button class="kpi-tab" onclick="kpiSetTab(this,'cors')">CORs</button>
+                    </div>
+                    <button class="kpi-close-btn" onclick="fecharDashboard()">✕</button>
+                </div>
+            </div>
+            <div class="kpi-body" id="kpiBody">
+                <p style="text-align:center;color:var(--text-muted);padding:40px 0;font-weight:700;">Carregando dados...</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        const URL_API = "https://script.google.com/macros/s/AKfycbwZMjbxJFBsgLwzCouv8hegNmhTzPS96srsfAJi1nC6EBWssVQ8ziQIX7Gu0y5SuqTk/exec";
+        
+        const defaultUsuarios = {
+            "48192292175030": "Francisco Eduardo"
+        };
+        let usuariosAutorizados = JSON.parse(localStorage.getItem('customUsuarios')) || defaultUsuarios;
+        let historicoGrupos = {};
+        let estadoAlocacao = {};
+        let bgGroupIndex = 1;
+            
+        async function verificarSenhaConfig() {
+            const senha = await customPrompt("Acesso Restrito!\nDigite a senha administrativa:");
+            if (senha === "14490") {
+                document.getElementById('configModalOverlay').style.display = 'flex';
+            } else if (senha !== null && senha !== "") {
+                await customAlert("Senha incorreta!");
+            }
+        }
+        function fecharConfig() {
+            document.getElementById('configModalOverlay').style.display = 'none';
+            usuariosAutorizados = JSON.parse(localStorage.getItem('customUsuarios')) || defaultUsuarios;
+        }
+        function mostrarMsgConfig(msg, cor) {
+            const el = document.getElementById('configMsg');
+            el.style.color = cor;
+            el.innerText = msg;
+            setTimeout(() => el.innerText = '', 3500);
+        }
+        function adicionarCracha() {
+            const cracha = document.getElementById('configNovoCracha').value.trim();
+            const nome = document.getElementById('configNovoNome').value.trim();
+            
+            if(!cracha || !nome) {
+                mostrarMsgConfig(" Preencha o número do crachá e o nome.", "#d32f2f");
+                return;
+            }
+            
+            usuariosAutorizados[cracha] = nome;
+            localStorage.setItem('customUsuarios', JSON.stringify(usuariosAutorizados));
+            
+            mostrarMsgConfig(` Crachá de ${nome} adicionado com sucesso!`, "#34C759");
+            document.getElementById('configNovoCracha').value = '';
+            document.getElementById('configNovoNome').value = '';
+        }
+        function exibirNotificacao(cracha, dataHora, grupoAlterado) {
+            const toast = document.getElementById('toastAlocacao');
+            const som = document.getElementById('somNotificacao');
+            usuariosAutorizados = JSON.parse(localStorage.getItem('customUsuarios')) || defaultUsuarios;
+            const nomeExibicao = usuariosAutorizados[cracha] || cracha || "Usuário";
+            if (som) {
+                som.currentTime = 0;
+                som.play().catch(e => console.warn("Interaja com a página uma vez para o som ser permitido."));
+            }
+            toast.innerHTML = `<strong> Alocação Atualizada!</strong><br>${grupoAlterado}<br>Abastecedor: ${nomeExibicao}<br>Horário: ${dataHora}`;
+            toast.style.display = 'block';
+            
+            setTimeout(() => toast.style.opacity = '1', 10);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.style.display = 'none', 500);
+            }, 30000);
+        }
+        window.addEventListener('storage', function(e) {
+            if(e.key === 'alocacaoGlobalSalva' && e.newValue) {
+                const dados = JSON.parse(e.newValue);
+                const chave = dados.dataHora + dados.cracha;
+                if(historicoGrupos[dados.grupo] !== chave) {
+                    historicoGrupos[dados.grupo] = chave;
+                    exibirNotificacao(dados.cracha, dados.dataHora, dados.grupo);
+                }
+            }
+            if(e.key === 'customUsuarios') {
+                usuariosAutorizados = JSON.parse(e.newValue);
+            }
+        });
+        async function checarProximoGrupoBackground() {
+            const grupoAtualVisor = document.getElementById('filtroGrupo').value;
+            let grupoChecar = "Grupo " + bgGroupIndex;
+            
+            bgGroupIndex++;
+            if(bgGroupIndex > 8) bgGroupIndex = 1;
+            if(grupoChecar === grupoAtualVisor) return;
+            try {
+                const response = await fetch(`${URL_API}?grupo=${grupoChecar}&_t=${new Date().getTime()}`, { cache: "no-store" });
+                const dados = await response.json();
+                
+                const estacoesReais = {};
+                dados.forEach(d => {
+                    if (!d.grupo || d.grupo === grupoChecar) {
+                        estacoesReais[d.estacao] = d;
+                    }
+                });
+                const listaExibida = Object.values(estacoesReais);
+                const infoData = listaExibida.find(d => d.dataHora);
+                
+                if (infoData && infoData.dataHora) {
+                    const chave = infoData.dataHora + (infoData.cracha || "");
+                    const strEstado = listaExibida.map(d => `${d.estacao}-${d.modelo || ''}-${d.tamanho || ''}`).join('|');
+                    if (!historicoGrupos[grupoChecar]) {
+                        historicoGrupos[grupoChecar] = chave;
+                        estadoAlocacao[grupoChecar] = strEstado;
+                    } else if (historicoGrupos[grupoChecar] !== chave) {
+                        historicoGrupos[grupoChecar] = chave;
+                        if (estadoAlocacao[grupoChecar] !== strEstado) {
+                            estadoAlocacao[grupoChecar] = strEstado;
+                            exibirNotificacao(infoData.cracha, infoData.dataHora, grupoChecar);
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+        
+        setInterval(checarProximoGrupoBackground, 3500);
+        function alternarTema() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            const isDark = body.classList.contains('dark-mode');
+            localStorage.setItem('temaEscuroMonitor', isDark);
+            document.getElementById('btnTema').innerText = isDark ? '☀️' : '🌒';
+        }
+        function customAlert(msg) {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('customModalOverlay');
+                document.getElementById('customModalMessage').innerText = msg;
+                document.getElementById('customModalInput').style.display = 'none';
+                document.getElementById('customModalBtnCancel').style.display = 'none';
+                
+                const btnOk = document.getElementById('customModalBtnOk');
+                btnOk.style.display = 'block';
+                btnOk.innerText = 'Entendi';
+                overlay.style.display = 'flex';
+                btnOk.onclick = () => { overlay.style.display = 'none'; resolve(true); };
+            });
+        }
+        function customPrompt(msg) {
+            return new Promise(resolve => {
+                const overlay = document.getElementById('customModalOverlay');
+                const input = document.getElementById('customModalInput');
+                document.getElementById('customModalMessage').innerText = msg;
+                input.style.display = 'block';
+                input.value = '';
+                
+                const btnCancel = document.getElementById('customModalBtnCancel');
+                const btnOk = document.getElementById('customModalBtnOk');
+                btnCancel.style.display = 'block';
+                btnOk.style.display = 'block';
+                btnOk.innerText = 'Confirmar';
+                overlay.style.display = 'flex';
+                input.focus();
+                btnOk.onclick = () => { overlay.style.display = 'none'; resolve(input.value); };
+                btnCancel.onclick = () => { overlay.style.display = 'none'; resolve(null); };
+                
+                input.onkeypress = (e) => { if(e.key === 'Enter') btnOk.click(); };
+            });
+        }
+        function trocarGrupo() {
+            const grupo = document.getElementById('filtroGrupo').value;
+            localStorage.setItem('ultimoGrupoSelecionado', grupo);
+            carregarPainel();
+        }
+        function aplicarFiltroModelo() {
+            const modeloSelecionado = document.getElementById('filtroModelo').value;
+            const wrappers = document.querySelectorAll('.flip-card-wrapper');
+            
+            wrappers.forEach(wrapper => {
+                const card = wrapper.querySelector('.station-card');
+                const modeloCard = card ? card.getAttribute('data-modelo') : '';
+                if (modeloSelecionado === "TODOS" || modeloCard === modeloSelecionado) {
+                    wrapper.style.display = 'block';
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            });
+        }
+
+        function gerarBackContent(detalhes, estacao, modelo) {
+            let html = '<div class="back-title"><span>EST ' + String(estacao).padStart(2, '0') + ' • DETALHES</span><span class="back-close">✕ VOLTAR</span></div>';
+
+            if (!detalhes || detalhes.length === 0) {
+                html += '<div class="no-details">Sem detalhes registrados</div>';
+                return html;
+            }
+
+            const grupos = {};
+            detalhes.forEach(function(d) {
+                const cor = (d.cor || '--').toString().trim();
+                const ordem = (d.ordem || '--').toString().trim();
+                const pacote = (d.pacote || '--').toString().trim();
+                
+                const chave = cor + '|' + ordem;
+
+                if (!grupos[chave]) { grupos[chave] = { cor: cor, ordem: ordem, pacotes: [] }; }
+                if (pacote !== '--' && pacote !== '') { grupos[chave].pacotes.push(pacote); }
+            });
+
+            html += '<div class="detail-header"><div>COR</div><div>ORDEM</div><div>PACOTES</div></div>';
+
+            Object.values(grupos).forEach(function(g) {
+                const pacoteTexto = g.pacotes.length > 0 ? g.pacotes.join('#') : '--';
+                
+                html += '<div class="detail-row">';
+                html += '<div class="detail-cell cor-cell" title="' + g.cor + '">' + g.cor + '</div>';
+                html += '<div class="detail-cell" title="' + g.ordem + '">' + g.ordem + '</div>';
+                html += '<div class="detail-cell" title="' + pacoteTexto + '">' + pacoteTexto + '</div>';
+                html += '</div>';
+            });
+
+            return html;
+        }
+
+        async function carregarPainel() {
+            const grupoAtual = document.getElementById('filtroGrupo').value;
+            const numEstacoes = (grupoAtual === "Grupo 4" || grupoAtual === "Grupo 5") ? 48 : 36;
+            try {
+                const response = await fetch(`${URL_API}?grupo=${grupoAtual}&_t=${new Date().getTime()}`, { cache: "no-store" });
+                const dados = await response.json();
+                const estacoesReais = {};
+                dados.forEach(d => {
+                    if (!d.grupo || d.grupo === grupoAtual) {
+                        estacoesReais[d.estacao] = d;
+                    }
+                });
+                
+                const listaExibida = Object.values(estacoesReais);
+                const modelosUnicos = new Set();
+                listaExibida.forEach(d => {
+                    if (d.modelo && d.modelo !== "Não Alocado" && d.modelo !== "VAZIO") {
+                        modelosUnicos.add(d.modelo.trim());
+                    }
+                });
+                const selectModelo = document.getElementById('filtroModelo');
+                const valorSelecionadoAtual = selectModelo.value;
+                
+                selectModelo.innerHTML = '<option value="TODOS">Todos</option>';
+                
+                [...modelosUnicos].sort().forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (m === valorSelecionadoAtual) opt.selected = true;
+                    selectModelo.appendChild(opt);
+                });
+                const contagem = {};
+                listaExibida.forEach(d => {
+                    if (d.modelo && d.tamanho && d.modelo !== "Não Alocado" && d.modelo !== "VAZIO") {
+                        const tamanhoNorm = String(d.tamanho).replace('.', ',').trim();
+                        const chave = `${d.modelo.trim()}-${tamanhoNorm}`;
+                        contagem[chave] = (contagem[chave] || 0) + 1;
+                    }
+                });
+                const grid = document.getElementById('stationGrid');
+                document.getElementById('loading-msg').style.display = 'none';
+                grid.innerHTML = "";
+                const numMaquinas = 3;
+                const containersMaquinas = {};
+                for (let m = 1; m <= numMaquinas; m++) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `machine-container m${m}`;
+                    wrapper.innerHTML = `<div class="machine-grid" id="grid-maq-${m}"></div>`;
+                    grid.appendChild(wrapper);
+                    containersMaquinas[m] = wrapper.querySelector('.machine-grid');
+                }
+                const criarCardElemento = (i) => {
+                    let item = estacoesReais[i];
+                    const statusBanco = (item && item.status) ? item.status : 'parada';
+                    const modeloBanco = (item && item.modelo) ? item.modelo : 'Não Alocado';
+                    const tamanhoBanco = (item && item.tamanho) ? String(item.tamanho).replace('.', ',').trim() : '--';
+                    const chaveAtual = `${modeloBanco.trim()}-${tamanhoBanco}`;
+                    const totalRepetido = contagem[chaveAtual] || 0;
+                    const badgeRepetido = totalRepetido > 1 ? `<span class="badge-repetido">${totalRepetido}x</span>` : "";
+
+                    const detalhes = (item && item.detalhes) ? item.detalhes : [];
+
+                    const flipWrapper = document.createElement('div');
+                    flipWrapper.className = 'flip-card-wrapper';
+
+                    const flipInner = document.createElement('div');
+                    flipInner.className = 'flip-card-inner';
+
+                    const front = document.createElement('div');
+                    front.className = `flip-card-front station-card status-${statusBanco}`;
+                    front.setAttribute('data-modelo', modeloBanco.trim());
+                    front.setAttribute('data-estacao', i); 
+                    front.innerHTML = `
+                        <div class="card-header">
+                            <h2>EST ${String(i).padStart(2, '0')}${badgeRepetido}</h2>
+                            <select onchange="mudarStatus('${grupoAtual}', ${i}, this.value)" onclick="event.stopPropagation()">
+                                <option value="rodando" ${statusBanco === 'rodando' ? 'selected' : ''}>RODANDO</option>
+                                <option value="parada" ${statusBanco === 'parada' ? 'selected' : ''}>PARADA</option>
+                                <option value="quebrada" ${statusBanco === 'quebrada' ? 'selected' : ''}>QUEBRADA</option>
+                            </select>
+                        </div>
+                        <div class="info-row"><span class="info-label">Modelo</span><span class="info-value" title="${modeloBanco}">${modeloBanco}</span></div>
+                        <div class="info-row"><span class="info-label">Tamanho</span><span class="info-value">${tamanhoBanco}</span></div>
+                        <div class="stats-grid">
+                            <div class="stat-box"><span class="stat-num">${item && item.giro ? item.giro : 0}</span><span class="stat-label">Giro</span></div>
+                            <div class="stat-box"><span class="stat-num">${item && item.refilagem ? item.refilagem : 0}</span><span class="stat-label">Refil</span></div>
+                            <div class="stat-box"><span class="stat-num">${item && item.reprovados ? item.reprovados : 0}</span><span class="stat-label">Reprov</span></div>
+                        </div>
+                    `;
+
+                    const back = document.createElement('div');
+                    back.className = 'flip-card-back';
+                    back.innerHTML = gerarBackContent(detalhes, i, modeloBanco);
+
+                    flipInner.appendChild(front);
+                    flipInner.appendChild(back);
+                    flipWrapper.appendChild(flipInner);
+
+                    front.addEventListener('click', function(e) {
+                        if (e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+                        flipWrapper.classList.add('flipped');
+                    });
+
+                    back.addEventListener('click', function() {
+                        flipWrapper.classList.remove('flipped');
+                    });
+
+                    return flipWrapper;
+                };
+                const metade = numEstacoes / 2;
+                const paresPorMaquina = metade / 3;
+                for (let i = 1; i <= metade; i++) {
+                    const numMaq = Math.ceil(i / paresPorMaquina);
+                    const gridDestino = containersMaquinas[numMaq];
+                    
+                    gridDestino.appendChild(criarCardElemento(i));
+                    gridDestino.appendChild(criarCardElemento(i + metade));
+                }
+                const infoData = listaExibida.find(d => d.dataHora);
+                
+                if (infoData && infoData.dataHora) {
+                    const chave = infoData.dataHora + (infoData.cracha || "");
+                    const strEstado = listaExibida.map(d => `${d.estacao}-${d.modelo || ''}-${d.tamanho || ''}`).join('|');
+                    
+                    if (!historicoGrupos[grupoAtual]) {
+                        historicoGrupos[grupoAtual] = chave;
+                        estadoAlocacao[grupoAtual] = strEstado;
+                    } else if (historicoGrupos[grupoAtual] !== chave) {
+                        historicoGrupos[grupoAtual] = chave;
+                        if (estadoAlocacao[grupoAtual] !== strEstado) {
+                            estadoAlocacao[grupoAtual] = strEstado;
+                            exibirNotificacao(infoData.cracha, infoData.dataHora, grupoAtual);
+                        }
+                    }
+                }
+                let dataAlocacaoFormatada = '--';
+                if (infoData && infoData.dataHora && infoData.dataHora.includes('/')) {
+                    const partes = infoData.dataHora.split(' ');
+                    const diaMes = partes[0].substring(0, 5);
+                    const horaMin = partes[1].substring(0, 5);
+                    dataAlocacaoFormatada = `${diaMes} - ${horaMin}`;
+                }
+                
+                document.getElementById('status-update').innerHTML =
+                    `Sincronizado: ${new Date().toLocaleTimeString()}<br>` +
+                    `Salvo: ${dataAlocacaoFormatada}`;
+                    
+                aplicarFiltroModelo();
+            } catch (e) { document.getElementById('loading-msg').style.display = 'block'; }
+        }
+        async function sincronizarProducao() {
+            const grupoAtual = document.getElementById('filtroGrupo').value;
+            const btn = document.getElementById('btnSyncRef');
+            try {
+                btn.disabled = true; btn.innerText = " Aguarde...";
+                document.getElementById('status-update').innerText = "Sincronizando DB...";
+                await fetch(URL_API, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "syncProduction", grupo: grupoAtual }) });
+                setTimeout(async () => {
+                    await customAlert('Solicitação enviada! Atualizando.');
+                    carregarPainel();
+                    btn.disabled = false; btn.innerHTML = " Atualizar Referência";
+                }, 2000);
+            } catch (error) { await customAlert('Erro na conexão.'); btn.disabled = false; btn.innerHTML = " Atualizar Referência"; }
+        }
+        function gerarImpressao() {
+            const grupo = document.getElementById('filtroGrupo').value;
+            const numEstacoes = (grupo === "Grupo 4" || grupo === "Grupo 5") ? 48 : 36;
+            const metade = numEstacoes / 2;
+            const dataAtual = new Date().toLocaleString('pt-BR');
+            const fronts = document.querySelectorAll('.flip-card-front.station-card');
+            
+            let dadosCard = {};
+            
+            fronts.forEach(card => {
+                const numEstacao = parseInt(card.getAttribute('data-estacao'), 10);
+                if (!isNaN(numEstacao)) {
+                    const mod = card.querySelector('.info-row:nth-child(2) .info-value').textContent;
+                    const tam = card.querySelector('.info-row:nth-child(3) .info-value').textContent;
+                    const giro = card.querySelector('.stats-grid .stat-box:nth-child(1) .stat-num').textContent;
+                    const refil = card.querySelector('.stats-grid .stat-box:nth-child(2) .stat-num').textContent;
+                    const repr = card.querySelector('.stats-grid .stat-box:nth-child(3) .stat-num').textContent;
+                    
+                    let statusTxt = "", statusCls = "";
+                    if(card.classList.contains('status-rodando')) { statusTxt = "RODANDO"; statusCls = "st-rodando"; }
+                    else if(card.classList.contains('status-parada')) { statusTxt = "PARADA"; statusCls = "st-parada"; }
+                    else { statusTxt = "QUEBRADA"; statusCls = "st-quebrada"; }
+                    
+                    dadosCard[numEstacao] = { mod, tam, giro, refil, repr, statusTxt, statusCls };
+                }
+            });
+
+            let printContent = `<html><head><title>Relatório - ${grupo}</title><style>
+                @page { size: A4 landscape; margin: 6mm; }
+                body { font-family: 'Segoe UI', sans-serif; color: #222; margin: 0; padding: 0; line-height: 1.2;}
+                .print-header { border-bottom: 2px solid #333; margin-bottom: 8px; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: flex-end; }
+                .print-header h2 { margin: 0; font-size: 14pt; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                th, td { border: 1px solid #999; padding: 3px 2px; text-align: center; font-size: 8pt; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 16px;}
+                th { background-color: #f0f0f0; font-weight: bold; text-transform: uppercase; font-size: 7.5pt; }
+                .st-rodando { color: #2e7d32; font-weight: bold; }
+                .st-parada { color: #d32f2f; font-weight: bold; }
+                .st-quebrada { color: #b7950b; font-weight: bold; }
+                .divisor { border-left: 3px solid #333 !important; }
+            </style></head><body>
+            <div class="print-header"><div><h2>${grupo} - Relatório de Alocação</h2></div><div>Gerado: ${dataAtual}</div></div>
+            <table><thead><tr>
+                <th style="width:30px;">EST</th><th>MODELO</th><th style="width:50px;">TAM</th><th style="width:35px;">GIRO</th><th style="width:35px;">REF</th><th style="width:35px;">REP</th><th style="width:65px;">STATUS</th>
+                <th class="divisor" style="width:30px;">EST</th><th>MODELO</th><th style="width:50px;">TAM</th><th style="width:35px;">GIRO</th><th style="width:35px;">REF</th><th style="width:35px;">REP</th><th style="width:65px;">STATUS</th>
+            </tr></thead><tbody>`;
+            
+            for (let i = 1; i <= metade; i++) {
+                let par = i + metade;
+                let d1 = dadosCard[i] || { mod: '', tam: '', giro: '', refil: '', repr: '', statusTxt: '', statusCls: '' };
+                let d2 = dadosCard[par] || { mod: '', tam: '', giro: '', refil: '', repr: '', statusTxt: '', statusCls: '' };
+                printContent += `<tr>
+                    <td style="font-weight:bold;">${i}</td>
+                    <td style="text-align:left; padding-left:4px;">${d1.mod}</td>
+                    <td>${d1.tam}</td><td>${d1.giro}</td><td>${d1.refil}</td><td>${d1.repr}</td>
+                    <td class="${d1.statusCls}">${d1.statusTxt}</td>
+                    
+                    <td class="divisor" style="font-weight:bold;">${par}</td>
+                    <td style="text-align:left; padding-left:4px;">${d2.mod}</td>
+                    <td>${d2.tam}</td><td>${d2.giro}</td><td>${d2.refil}</td><td>${d2.repr}</td>
+                    <td class="${d2.statusCls}">${d2.statusTxt}</td>
+                </tr>`;
+            }
+            
+            printContent += `</tbody></table></body></html>`;
+            
+            let iframe = document.getElementById('fastPrintFrame');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'fastPrintFrame';
+                iframe.style.position = 'absolute';
+                iframe.style.width = '0px';
+                iframe.style.height = '0px';
+                iframe.style.border = 'none';
+                document.body.appendChild(iframe);
+            }
+            
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(printContent);
+            doc.close();
+            
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }
+        async function alterarStatusGlobal() {
+            const novoStatus = document.getElementById('statusGlobal').value;
+            if (!novoStatus) { await customAlert("Selecione um status primeiro."); return; }
+            
+            usuariosAutorizados = JSON.parse(localStorage.getItem('customUsuarios')) || defaultUsuarios;
+            
+            const info = await customPrompt(`Colocar TODAS as estações como ${novoStatus.toUpperCase()}?\n\nInforme seu crachá para confirmar:`);
+            const crachaDigitado = info ? info.trim() : "";
+            const nomeUsuario = usuariosAutorizados[crachaDigitado];
+            
+            if (!nomeUsuario) { await customAlert("Acesso negado. Crachá inválido."); return; }
+            
+            const grupoAtual = document.getElementById('filtroGrupo').value;
+            const numEstacoes = (grupoAtual === "Grupo 4" || grupoAtual === "Grupo 5") ? 48 : 36;
+            try {
+                document.getElementById('status-update').innerText = "Processando...";
+                const promessas = [];
+                for (let i = 1; i <= numEstacoes; i++) {
+                    promessas.push(fetch(URL_API, { method: 'POST', body: JSON.stringify({ action: "updateStatus", grupo: grupoAtual, estacao: i, status: novoStatus, cracha: crachaDigitado }) }));
+                }
+                await Promise.all(promessas);
+                await customAlert(`Status alterado para ${novoStatus.toUpperCase()}.`);
+                carregarPainel();
+            } catch (err) { carregarPainel(); }
+        }
+        async function mudarStatus(grupo, estacao, novoStatus) {
+            usuariosAutorizados = JSON.parse(localStorage.getItem('customUsuarios')) || defaultUsuarios;
+            
+            const info = await customPrompt(`Mudar EST ${estacao} para ${novoStatus.toUpperCase()}.\n\nInforme seu crachá:`);
+            const crachaDigitado = info ? info.trim() : "";
+            const nomeUsuario = usuariosAutorizados[crachaDigitado];
+            
+            if (!nomeUsuario) {
+                await customAlert("Acesso negado. Alteração cancelada.");
+                carregarPainel();
+                return;
+            }
+            try {
+                document.getElementById('status-update').innerText = "Salvando...";
+                await fetch(URL_API, { method: 'POST', body: JSON.stringify({ action: "updateStatus", grupo: grupo, estacao: estacao, status: novoStatus, cracha: crachaDigitado }) });
+                carregarPainel();
+            } catch (err) { carregarPainel(); }
+        }
+        /* ========================================================
+           KPI DASHBOARD — LÓGICA COMPLETA
+           Lê os dados dos cards já renderizados no DOM.
+           ======================================================== */
+        let _kpiCharts = [];
+        let _kpiTabAtual = 'geral';
+
+        function kpiOverlayClick(e) {
+            if (e.target === document.getElementById('kpiOverlay')) fecharDashboard();
+        }
+        function fecharDashboard() {
+            document.getElementById('kpiOverlay').classList.remove('open');
+            _kpiCharts.forEach(c => { try { c.destroy(); } catch(ex){} });
+            _kpiCharts = [];
+        }
+        function kpiSetTab(btn, tab) {
+            document.querySelectorAll('.kpi-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            _kpiTabAtual = tab;
+            _renderKpiBody(_coletarDados());
+        }
+        function abrirDashboard() {
+            _kpiCharts.forEach(c => { try { c.destroy(); } catch(ex){} });
+            _kpiCharts = [];
+            _kpiTabAtual = 'geral';
+            document.querySelectorAll('.kpi-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+            document.getElementById('kpiOverlay').classList.add('open');
+            const grupo = document.getElementById('filtroGrupo').value;
+            document.getElementById('kpiSubtitle').textContent = grupo + ' · ' + new Date().toLocaleTimeString('pt-BR');
+            _renderKpiBody(_coletarDados());
+        }
+        function _coletarDados() {
+            const fronts = document.querySelectorAll('.flip-card-front.station-card');
+            const estacoes = [];
+            fronts.forEach(card => {
+                const estNum = parseInt(card.getAttribute('data-estacao'), 10);
+                const modelo = (card.querySelector('.info-row:nth-child(2) .info-value')||{}).textContent||'N/A';
+                const tamanho= (card.querySelector('.info-row:nth-child(3) .info-value')||{}).textContent||'--';
+                const giro   = parseInt((card.querySelector('.stats-grid .stat-box:nth-child(1) .stat-num')||{}).textContent)||0;
+                const refil  = parseInt((card.querySelector('.stats-grid .stat-box:nth-child(2) .stat-num')||{}).textContent)||0;
+                const reprov = parseInt((card.querySelector('.stats-grid .stat-box:nth-child(3) .stat-num')||{}).textContent)||0;
+                let status = 'parada';
+                if(card.classList.contains('status-rodando')) status='rodando';
+                if(card.classList.contains('status-quebrada')) status='quebrada';
+                const wrapper = card.closest('.flip-card-wrapper');
+                const cors = [];
+                if(wrapper) wrapper.querySelectorAll('.detail-row .cor-cell').forEach(c => { const v=c.textContent.trim(); if(v&&v!=='--') cors.push(v); });
+                estacoes.push({estNum,modelo:modelo.trim(),tamanho:tamanho.trim(),giro,refil,reprov,status,cors});
+            });
+            const totalGiro=estacoes.reduce((a,e)=>a+e.giro,0), totalRefil=estacoes.reduce((a,e)=>a+e.refil,0), totalReprov=estacoes.reduce((a,e)=>a+e.reprov,0);
+            const totalEst=estacoes.length, qtdRodando=estacoes.filter(e=>e.status==='rodando').length, qtdParada=estacoes.filter(e=>e.status==='parada').length, qtdQuebrada=estacoes.filter(e=>e.status==='quebrada').length;
+            const porModelo={}, porTamanho={}, porCor={};
+            estacoes.forEach(e => {
+                if(!porModelo[e.modelo]) porModelo[e.modelo]={giro:0,refil:0,reprov:0,qtd:0};
+                porModelo[e.modelo].giro+=e.giro; porModelo[e.modelo].refil+=e.refil; porModelo[e.modelo].reprov+=e.reprov; porModelo[e.modelo].qtd+=1;
+                const t=e.tamanho||'--';
+                if(!porTamanho[t]) porTamanho[t]={giro:0,refil:0,reprov:0,qtd:0};
+                porTamanho[t].giro+=e.giro; porTamanho[t].refil+=e.refil; porTamanho[t].reprov+=e.reprov; porTamanho[t].qtd+=1;
+                e.cors.forEach(cor => { porCor[cor]=(porCor[cor]||0)+1; });
+            });
+            const topModGiro=Object.entries(porModelo).sort((a,b)=>b[1].giro-a[1].giro).slice(0,8);
+            const topModRefil=Object.entries(porModelo).sort((a,b)=>b[1].refil-a[1].refil).slice(0,8);
+            const tamSorted=Object.entries(porTamanho).sort((a,b)=>b[1].giro-a[1].giro);
+            const topCors=Object.entries(porCor).sort((a,b)=>b[1]-a[1]).slice(0,10);
+            return {estacoes,totalGiro,totalRefil,totalReprov,totalEst,qtdRodando,qtdParada,qtdQuebrada,porModelo,porTamanho,porCor,topModGiro,topModRefil,tamSorted,topCors};
+        }
+        function _renderKpiBody(d) {
+            _kpiCharts.forEach(c=>{try{c.destroy();}catch(ex){}});
+            _kpiCharts=[];
+            const isDark=document.body.classList.contains('dark-mode');
+            const gridColor=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.06)', lblColor=isDark?'#98989d':'#86868b', txtColor=isDark?'#f5f5f7':'#1d1d1f';
+            Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color=lblColor;
+            const body=document.getElementById('kpiBody');
+            if(_kpiTabAtual==='geral') body.innerHTML=_tplGeral(d);
+            else if(_kpiTabAtual==='modelos') body.innerHTML=_tplModelos(d);
+            else if(_kpiTabAtual==='tamanhos') body.innerHTML=_tplTamanhos(d);
+            else if(_kpiTabAtual==='cors') body.innerHTML=_tplCors(d);
+            requestAnimationFrame(()=>_buildCharts(d,isDark,gridColor,lblColor,txtColor));
+        }
+        function _tplGeral(d) {
+            const pctR=d.totalEst?((d.qtdRodando/d.totalEst)*100).toFixed(0):0;
+            const pctP=d.totalEst?((d.qtdParada/d.totalEst)*100).toFixed(0):0;
+            const pctQ=d.totalEst?((d.qtdQuebrada/d.totalEst)*100).toFixed(0):0;
+            const efic=d.totalEst?(d.qtdRodando/d.totalEst*100).toFixed(1):0;
+            return `<div class="kpi-big-row">
+                <div class="kpi-big-card c-blue"><span class="kpi-emoji">🔄</span><span class="kpi-num">${d.totalGiro.toLocaleString('pt-BR')}</span><span class="kpi-lbl">Total Giro</span><span class="kpi-sub">Soma de todas estações</span></div>
+                <div class="kpi-big-card c-purple"><span class="kpi-emoji">✂️</span><span class="kpi-num">${d.totalRefil.toLocaleString('pt-BR')}</span><span class="kpi-lbl">Total Refilagem</span><span class="kpi-sub">Peças refiladas</span></div>
+                <div class="kpi-big-card c-red"><span class="kpi-emoji">❌</span><span class="kpi-num">${d.totalReprov.toLocaleString('pt-BR')}</span><span class="kpi-lbl">Total Reprovados</span><span class="kpi-sub">Peças reprovadas</span></div>
+                <div class="kpi-big-card c-green"><span class="kpi-emoji">⚡</span><span class="kpi-num">${efic}%</span><span class="kpi-lbl">Eficiência</span><span class="kpi-sub">${d.qtdRodando} de ${d.totalEst} rodando</span></div>
+                <div class="kpi-big-card c-teal"><span class="kpi-emoji">🏭</span><span class="kpi-num">${d.totalEst}</span><span class="kpi-lbl">Estações</span><span class="kpi-sub">Total no grupo</span></div>
+                <div class="kpi-big-card c-yellow"><span class="kpi-emoji">📐</span><span class="kpi-num">${Object.keys(d.porModelo).length}</span><span class="kpi-lbl">Modelos Únicos</span><span class="kpi-sub">Em produção</span></div>
+            </div>
+            <div class="kpi-charts-grid">
+                <div class="kpi-chart-card">
+                    <div class="kpi-chart-title"><span class="dot" style="background:#007AFF"></span>Status das Estações</div>
+                    <div class="kpi-status-grid">
+                        <div class="kpi-status-tile rodando"><span class="st-num">${d.qtdRodando}</span><span class="st-lbl">Rodando</span><span class="st-pct">${pctR}%</span></div>
+                        <div class="kpi-status-tile parada"><span class="st-num">${d.qtdParada}</span><span class="st-lbl">Parada</span><span class="st-pct">${pctP}%</span></div>
+                        <div class="kpi-status-tile quebrada"><span class="st-num">${d.qtdQuebrada}</span><span class="st-lbl">Quebrada</span><span class="st-pct">${pctQ}%</span></div>
+                    </div>
+                    <div class="kpi-chart-wrap" style="min-height:150px;margin-top:16px;"><canvas id="chartDonutStatus"></canvas></div>
+                </div>
+                <div class="kpi-chart-card span2">
+                    <div class="kpi-chart-title"><span class="dot" style="background:#34C759"></span>Top Modelos — Giro</div>
+                    <div class="kpi-chart-wrap"><canvas id="chartBarGiro"></canvas></div>
+                </div>
+                <div class="kpi-chart-card span2">
+                    <div class="kpi-chart-title"><span class="dot" style="background:#AF52DE"></span>Top Modelos — Refilagem vs Reprovados</div>
+                    <div class="kpi-chart-wrap"><canvas id="chartBarRefilReprov"></canvas></div>
+                </div>
+                <div class="kpi-chart-card">
+                    <div class="kpi-chart-title"><span class="dot" style="background:#FF3B30"></span>Ranking Giro por Modelo</div>
+                    <ul class="kpi-rank-list" id="rankGiroModelo"></ul>
+                </div>
+            </div>`;
+        }
+        function _tplModelos(d) {
+            const sorted=Object.entries(d.porModelo).sort((a,b)=>b[1].giro-a[1].giro);
+            const rows=sorted.map(([mod,v],i)=>`<tr style="border-bottom:1px solid var(--glass-border);">
+                <td style="padding:10px 8px;font-weight:900;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">#${i+1}</td>
+                <td style="padding:10px 8px;font-weight:700;color:var(--text-main);">${mod}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-family:'JetBrains Mono',monospace;color:#007AFF;">${v.giro.toLocaleString('pt-BR')}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-family:'JetBrains Mono',monospace;color:#AF52DE;">${v.refil.toLocaleString('pt-BR')}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:900;font-family:'JetBrains Mono',monospace;color:#FF3B30;">${v.reprov.toLocaleString('pt-BR')}</td>
+                <td style="padding:10px 8px;text-align:center;font-weight:700;color:var(--text-muted);">${v.qtd}</td>
+            </tr>`).join('');
+            return `<div class="kpi-charts-grid">
+                <div class="kpi-chart-card span2"><div class="kpi-chart-title"><span class="dot" style="background:#007AFF"></span>Giro por Modelo (Top 10)</div><div class="kpi-chart-wrap"><canvas id="chartModGiro2"></canvas></div></div>
+                <div class="kpi-chart-card"><div class="kpi-chart-title"><span class="dot" style="background:#FF3B30"></span>Reprovados por Modelo</div><div class="kpi-chart-wrap"><canvas id="chartModReprov2"></canvas></div></div>
+                <div class="kpi-chart-card span3">
+                    <div class="kpi-chart-title"><span class="dot" style="background:#5AC8FA"></span>Tabela Completa de Modelos</div>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead><tr style="border-bottom:2px solid var(--glass-border);">
+                            <th style="padding:8px;color:var(--text-muted);font-size:10px;font-weight:900;text-transform:uppercase;text-align:left;">#</th>
+                            <th style="padding:8px;color:var(--text-muted);font-size:10px;font-weight:900;text-transform:uppercase;text-align:left;">Modelo</th>
+                            <th style="padding:8px;color:#007AFF;font-size:10px;font-weight:900;text-transform:uppercase;">Giro</th>
+                            <th style="padding:8px;color:#AF52DE;font-size:10px;font-weight:900;text-transform:uppercase;">Refil</th>
+                            <th style="padding:8px;color:#FF3B30;font-size:10px;font-weight:900;text-transform:uppercase;">Reprov</th>
+                            <th style="padding:8px;color:var(--text-muted);font-size:10px;font-weight:900;text-transform:uppercase;">Estações</th>
+                        </tr></thead><tbody>${rows}</tbody>
+                    </table></div>
+                </div>
+            </div>`;
+        }
+        function _tplTamanhos(d) {
+            return `<div class="kpi-charts-grid">
+                <div class="kpi-chart-card span2"><div class="kpi-chart-title"><span class="dot" style="background:#34C759"></span>Giro por Tamanho</div><div class="kpi-chart-wrap"><canvas id="chartTamGiro"></canvas></div></div>
+                <div class="kpi-chart-card"><div class="kpi-chart-title"><span class="dot" style="background:#FFCC00"></span>Estações por Tamanho</div><div class="kpi-chart-wrap"><canvas id="chartTamQtd"></canvas></div></div>
+                <div class="kpi-chart-card span3"><div class="kpi-chart-title"><span class="dot" style="background:#AF52DE"></span>Refilagem por Tamanho</div><div class="kpi-chart-wrap" style="min-height:220px;"><canvas id="chartTamRefil"></canvas></div></div>
+            </div>`;
+        }
+        function _tplCors(d) {
+            if(!d.topCors.length) return `<div style="text-align:center;padding:60px 0;color:var(--text-muted);font-weight:700;font-size:14px;">🎨 Nenhuma COR registrada nas estações visíveis.<br><small style="font-size:11px;margin-top:8px;display:block;">As CORs aparecem no verso dos cards (detalhes de ordem/pacote).</small></div>`;
+            return `<div class="kpi-charts-grid">
+                <div class="kpi-chart-card span2"><div class="kpi-chart-title"><span class="dot" style="background:#FF9500"></span>Frequência de CORs</div><div class="kpi-chart-wrap"><canvas id="chartCorsBar"></canvas></div></div>
+                <div class="kpi-chart-card"><div class="kpi-chart-title"><span class="dot" style="background:#FF6B35"></span>Distribuição CORs</div><div class="kpi-chart-wrap"><canvas id="chartCorsDonu"></canvas></div></div>
+                <div class="kpi-chart-card span3"><div class="kpi-chart-title"><span class="dot" style="background:#5AC8FA"></span>Ranking de CORs</div><ul class="kpi-rank-list" id="rankCors"></ul></div>
+            </div>`;
+        }
+        function _palette(n,alpha=1) {
+            const colors=[`rgba(0,122,255,${alpha})`,`rgba(94,92,230,${alpha})`,`rgba(52,199,89,${alpha})`,`rgba(175,82,222,${alpha})`,`rgba(90,200,250,${alpha})`,`rgba(255,149,0,${alpha})`,`rgba(255,59,48,${alpha})`,`rgba(255,204,0,${alpha})`,`rgba(50,173,230,${alpha})`,`rgba(191,90,242,${alpha})`];
+            const result=[]; for(let i=0;i<n;i++) result.push(colors[i%colors.length]); return result;
+        }
+        function _buildCharts(d,isDark,gridColor,lblColor,txtColor) {
+            const barH=(yMaxLen)=>({indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor},ticks:{color:lblColor,font:{size:10}}},y:{grid:{display:false},ticks:{color:txtColor,font:{size:10,weight:'700'}}}}});
+            const barV={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:lblColor,font:{size:10}}},y:{grid:{color:gridColor},ticks:{color:lblColor,font:{size:10}}}}};
+
+            if(_kpiTabAtual==='geral') {
+                const cds=document.getElementById('chartDonutStatus');
+                if(cds) _kpiCharts.push(new Chart(cds,{type:'doughnut',data:{labels:['Rodando','Parada','Quebrada'],datasets:[{data:[d.qtdRodando,d.qtdParada,d.qtdQuebrada],backgroundColor:['rgba(52,199,89,0.85)','rgba(255,59,48,0.85)','rgba(255,204,0,0.85)'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:lblColor,font:{size:11,weight:'700'},padding:14,boxWidth:12}}}}}));
+                const topG=d.topModGiro.slice(0,8);
+                const cbg=document.getElementById('chartBarGiro');
+                if(cbg) _kpiCharts.push(new Chart(cbg,{type:'bar',data:{labels:topG.map(([m])=>m.length>16?m.slice(0,16)+'…':m),datasets:[{label:'Giro',data:topG.map(([,v])=>v.giro),backgroundColor:_palette(topG.length,0.8),borderRadius:6,borderSkipped:false}]},options:barH()}));
+                const topR=d.topModRefil.slice(0,8);
+                const cbr=document.getElementById('chartBarRefilReprov');
+                if(cbr) _kpiCharts.push(new Chart(cbr,{type:'bar',data:{labels:topR.map(([m])=>m.length>14?m.slice(0,14)+'…':m),datasets:[{label:'Refilagem',data:topR.map(([,v])=>v.refil),backgroundColor:'rgba(175,82,222,0.75)',borderRadius:4,borderSkipped:false},{label:'Reprovados',data:topR.map(([m])=>(d.porModelo[m]||{}).reprov||0),backgroundColor:'rgba(255,59,48,0.75)',borderRadius:4,borderSkipped:false}]},options:{...barH(),plugins:{legend:{display:true,labels:{color:lblColor,font:{size:10,weight:'700'}}}}}}));
+                const rankEl=document.getElementById('rankGiroModelo');
+                if(rankEl){const top5=d.topModGiro.slice(0,7);const maxV=top5[0]?top5[0][1].giro:1;rankEl.innerHTML=top5.map(([mod,v],i)=>`<li class="kpi-rank-item"><span class="kpi-rank-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span><span class="kpi-rank-name" title="${mod}">${mod}</span><div class="kpi-rank-bar-wrap"><div class="kpi-rank-bar-fill" style="width:${(v.giro/maxV*100).toFixed(1)}%"></div></div><span class="kpi-rank-val">${v.giro.toLocaleString('pt-BR')}</span></li>`).join('');}
+            }
+            else if(_kpiTabAtual==='modelos') {
+                const top10=Object.entries(d.porModelo).sort((a,b)=>b[1].giro-a[1].giro).slice(0,10);
+                const c1=document.getElementById('chartModGiro2');
+                if(c1) _kpiCharts.push(new Chart(c1,{type:'bar',data:{labels:top10.map(([m])=>m.length>14?m.slice(0,14)+'…':m),datasets:[{label:'Giro',data:top10.map(([,v])=>v.giro),backgroundColor:_palette(top10.length,0.8),borderRadius:6,borderSkipped:false}]},options:barH()}));
+                const top10r=Object.entries(d.porModelo).sort((a,b)=>b[1].reprov-a[1].reprov).slice(0,8);
+                const c2=document.getElementById('chartModReprov2');
+                if(c2) _kpiCharts.push(new Chart(c2,{type:'doughnut',data:{labels:top10r.map(([m])=>m.length>12?m.slice(0,12)+'…':m),datasets:[{data:top10r.map(([,v])=>v.reprov||0.01),backgroundColor:_palette(top10r.length,0.8),borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{position:'right',labels:{color:lblColor,font:{size:9,weight:'700'},padding:10,boxWidth:10}}}}}));
+            }
+            else if(_kpiTabAtual==='tamanhos') {
+                const tams=d.tamSorted; const labels=tams.map(([t])=>t);
+                const c1=document.getElementById('chartTamGiro');
+                if(c1) _kpiCharts.push(new Chart(c1,{type:'bar',data:{labels,datasets:[{label:'Giro',data:tams.map(([,v])=>v.giro),backgroundColor:_palette(tams.length,0.8),borderRadius:6,borderSkipped:false}]},options:barH()}));
+                const c2=document.getElementById('chartTamQtd');
+                if(c2) _kpiCharts.push(new Chart(c2,{type:'pie',data:{labels,datasets:[{data:tams.map(([,v])=>v.qtd),backgroundColor:_palette(tams.length,0.85),borderWidth:0,hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:lblColor,font:{size:9,weight:'700'},padding:10,boxWidth:10}}}}}));
+                const c3=document.getElementById('chartTamRefil');
+                if(c3) _kpiCharts.push(new Chart(c3,{type:'bar',data:{labels,datasets:[{label:'Refilagem',data:tams.map(([,v])=>v.refil),backgroundColor:'rgba(175,82,222,0.8)',borderRadius:5,borderSkipped:false},{label:'Reprovados',data:tams.map(([,v])=>v.reprov),backgroundColor:'rgba(255,59,48,0.8)',borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:lblColor,font:{size:11,weight:'700'}}}},scales:{x:{grid:{display:false},ticks:{color:lblColor,font:{size:11}}},y:{grid:{color:gridColor},ticks:{color:lblColor,font:{size:11}}}}}}));
+            }
+            else if(_kpiTabAtual==='cors') {
+                const topC=d.topCors; if(!topC.length) return;
+                const c1=document.getElementById('chartCorsBar');
+                if(c1) _kpiCharts.push(new Chart(c1,{type:'bar',data:{labels:topC.map(([c])=>c),datasets:[{label:'Ocorrências',data:topC.map(([,v])=>v),backgroundColor:_palette(topC.length,0.8),borderRadius:6,borderSkipped:false}]},options:barH()}));
+                const c2=document.getElementById('chartCorsDonu');
+                if(c2) _kpiCharts.push(new Chart(c2,{type:'doughnut',data:{labels:topC.map(([c])=>c),datasets:[{data:topC.map(([,v])=>v),backgroundColor:_palette(topC.length,0.85),borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{color:lblColor,font:{size:9,weight:'700'},padding:10,boxWidth:10}}}}}));
+                const rankEl=document.getElementById('rankCors');
+                if(rankEl){const maxV=topC[0]?topC[0][1]:1;rankEl.innerHTML=topC.map(([cor,v],i)=>`<li class="kpi-rank-item"><span class="kpi-rank-pos">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</span><span class="kpi-rank-name">${cor}</span><div class="kpi-rank-bar-wrap"><div class="kpi-rank-bar-fill" style="width:${(v/maxV*100).toFixed(1)}%"></div></div><span class="kpi-rank-val">${v}</span></li>`).join('');}
+            }
+        }
+
+        window.onload = () => {
+            const temaSalvo = localStorage.getItem('temaEscuroMonitor');
+            if (temaSalvo === 'true') {
+                document.body.classList.add('dark-mode');
+                const btnTema = document.getElementById('btnTema');
+                if (btnTema) btnTema.innerText = '☀️';
+            }
+            const g = localStorage.getItem('ultimoGrupoSelecionado');
+            if (g) document.getElementById('filtroGrupo').value = g;
+            carregarPainel();
+        };
+        setInterval(carregarPainel, 10000);
+    </script>
+</body>
+</html>
